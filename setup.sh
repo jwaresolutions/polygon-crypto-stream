@@ -24,18 +24,10 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Function to check if a command exists
-check_command() {
-    if ! command -v $1 &> /dev/null; then
-        print_warning "$1 is required but not installed."
-        return 1
-    fi
-    return 0
-}
-
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
-    print_error "Please run as root (use sudo)"
+    print_error "This script must be run as root (with sudo)"
+    print_error "Please run: sudo $0"
     exit 1
 fi
 
