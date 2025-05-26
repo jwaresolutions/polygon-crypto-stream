@@ -1,0 +1,14 @@
+[Unit]
+Description=SPY Streaming Data Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/src
+ExecStart={location to source}/venv/bin/python {location to source}/src/crypto_stream_service.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target#  
