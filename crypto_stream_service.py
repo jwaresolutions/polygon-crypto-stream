@@ -1,20 +1,19 @@
-from typing import List, Dict, Any
+import os
+import asyncio
 import logging
 from datetime import datetime
-import asyncio
 import pandas as pd
-import os
 from connectors.polygon import PolygonConnector
 
-# Setup logging
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("spy_stream.log"), logging.StreamHandler()],
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
-logger: logging.Logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-current_data: List[Dict[str, Any]] = []
+# Global variable to store data before writing to CSV
+current_data = []
 
 def save_data() -> None:
     """Save data to CSV file"""
@@ -29,7 +28,7 @@ def save_data() -> None:
         # Create data directory if it doesn't exist
         os.makedirs("data", exist_ok=True)
 
-        filename: str = f"data/SPY_{date_str}.csv"
+        filename: str = f"data/BTCUSD_{date_str}.csv"
 
         if os.path.exists(filename):
             df.to_csv(filename, mode="a", header=False, index=False)
@@ -42,21 +41,31 @@ def save_data() -> None:
     except Exception as e:
         logger.error(f"Error saving data: {e}")
 
-async def main_async() -> None:
-    """Main async function to run the streaming service"""
+async def process_crypto_data() -> None:
+    """Process incoming crypto data"""
     connector = PolygonConnector()
     
-    while True:
-        try:
-            await connector.connect()
-            
-            async for bar_data in connector.stream_minute_bars("SPY"):
-                current_data.append(bar_data)
-                logger.info(f"Received bar: {bar_data['timestamp']} - Close: {bar_data['close']}")
+    try:
+        async for bar in connector.stream_minute_bars("BTCUSD"):
+            try:
+                current_data.append(bar)
                 
+                # Save to file every 100 records
                 if len(current_data) >= 100:
                     save_data()
                     
+            except Exception as e:
+                logger.error(f"Error processing bar: {e}")
+                
+    except Exception as e:
+        logger.error(f"Stream error: {e}")
+        raise
+
+async def main_async() -> None:
+    """Async main function"""
+    while True:
+        try:
+            await process_crypto_data()
         except Exception as e:
             logger.error(f"Error in main loop: {e}")
             await asyncio.sleep(5)  # Wait before reconnecting
@@ -64,7 +73,7 @@ async def main_async() -> None:
 def main() -> None:
     """Main function to run the streaming service"""
     try:
-        logger.info("Starting SPY data streaming service...")
+        logger.info("Starting BTCUSD data streaming service...")
         asyncio.run(main_async())
         
     except KeyboardInterrupt:

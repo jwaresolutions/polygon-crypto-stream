@@ -1,5 +1,5 @@
 [Unit]
-Description=SPY Streaming Data Service
+Description=BTCUSD Streaming Data Service
 After=network.target
 
 [Service]
