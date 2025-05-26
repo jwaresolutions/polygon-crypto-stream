@@ -135,17 +135,38 @@ else
     exit 1
 fi
 
-# Check for config file
-if [ ! -f "config.py" ]; then
-    if [ -f "config.template.py" ]; then
-        print_status "Creating config.py from template..."
-        cp config.template.py config.py
-        print_warning "Please edit config.py with your Polygon.io API key"
-        read -p "Would you like to edit config.py now? (y/n) " -n 1 -r
+# Check and configure API key
+print_status "Checking API configuration..."
+if [ -f "config.py" ]; then
+    # Try to extract existing API key
+    CURRENT_KEY=$(grep "POLYGON_API_KEY" config.py | cut -d"'" -f2 || echo "")
+    if [ ! -z "$CURRENT_KEY" ] && [ "$CURRENT_KEY" != "your_polygon_api_key_here" ]; then
+        print_status "Found existing API key: ${CURRENT_KEY:0:8}..."
+        read -p "Would you like to change the API key? (y/n) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            ${EDITOR:-vim} config.py
+            read -p "Enter your Polygon.io API key: " API_KEY
+            # Create new config with provided API key
+            echo "# Polygon.io API Credentials" > config.py
+            echo "POLYGON_API_KEY: str = '${API_KEY}'" >> config.py
+            print_success "API key updated"
         fi
+    else
+        print_warning "No valid API key found in config.py"
+        read -p "Enter your Polygon.io API key: " API_KEY
+        # Create new config with provided API key
+        echo "# Polygon.io API Credentials" > config.py
+        echo "POLYGON_API_KEY: str = '${API_KEY}'" >> config.py
+        print_success "API key configured"
+    fi
+else
+    if [ -f "config.template.py" ]; then
+        print_status "Creating new config.py..."
+        read -p "Enter your Polygon.io API key: " API_KEY
+        # Create new config with provided API key
+        echo "# Polygon.io API Credentials" > config.py
+        echo "POLYGON_API_KEY: str = '${API_KEY}'" >> config.py
+        print_success "API key configured"
     else
         print_error "config.template.py not found"
         exit 1
