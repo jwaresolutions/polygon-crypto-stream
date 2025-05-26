@@ -1,0 +1,1 @@
+modify setup so that all required files are installed in the system directory.
