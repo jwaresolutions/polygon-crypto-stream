@@ -18,6 +18,12 @@ A Python service that streams real-time Bitcoin/USD market data using Polygon.io
 - Linux system with systemd (for service deployment)
 
 ## Installation
+1. Use the included setup file. it will ask you for your polygon api key during setup, please have it ready.
+```bash
+./setup.py
+```
+
+## Alternate Installation
 
 1. Clone the repository:
 ```bash
