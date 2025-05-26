@@ -36,13 +36,17 @@ check_command() {
 # Function to check for root privileges
 check_root() {
     if [ "$EUID" -ne 0 ]; then 
-        print_error "This script must be run as root (with sudo)"
-        print_error "Please run: sudo $0"
-        exit 1
+        print_warning "This script is not running as root"
+        print_warning "Some operations may require sudo privileges"
+        read -p "Do you want to continue? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
     fi
 }
 
-# First thing: check for root privileges
+# Check root privileges
 check_root
 
 # Install prerequisites
@@ -77,17 +81,38 @@ fi
 PROJECT_DIR=$(pwd)
 print_status "Project directory: $PROJECT_DIR"
 
-# Create and activate virtual environment
-if [ ! -d "venv" ]; then
+# Virtual environment handling
+print_status "Checking virtual environment..."
+if [ -d "venv" ]; then
+    if [ ! -f "venv/bin/activate" ]; then
+        print_warning "Corrupted virtual environment found"
+        print_status "Removing corrupted virtual environment..."
+        rm -rf venv
+        print_status "Creating new virtual environment..."
+        if ! python3 -m venv venv; then
+            print_error "Failed to create virtual environment"
+            exit 1
+        fi
+    else
+        print_warning "Virtual environment exists"
+        read -p "Do you want to recreate it? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            rm -rf venv
+            if ! python3 -m venv venv; then
+                print_error "Failed to create virtual environment"
+                exit 1
+            fi
+        fi
+    fi
+else
     print_status "Creating virtual environment..."
     if ! python3 -m venv venv; then
         print_error "Failed to create virtual environment"
         exit 1
     fi
-    print_success "Virtual environment created"
-else
-    print_warning "Virtual environment already exists"
 fi
+print_success "Virtual environment ready"
 
 # Activate virtual environment
 print_status "Activating virtual environment..."
@@ -145,7 +170,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=$USER
+User=root
 WorkingDirectory=$PROJECT_DIR
 ExecStart=$PROJECT_DIR/venv/bin/python $PROJECT_DIR/crypto_stream_service.py
 Restart=always
@@ -162,9 +187,9 @@ if systemctl is-active --quiet crypto-stream; then
     # Compare existing service file with new one
     if ! cmp -s "/etc/systemd/system/$SERVICE_FILE" "$TEMP_SERVICE_FILE"; then
         print_status "Service file needs updating..."
-        sudo cp $TEMP_SERVICE_FILE "/etc/systemd/system/$SERVICE_FILE"
-        sudo systemctl daemon-reload
-        sudo systemctl restart crypto-stream
+        cp $TEMP_SERVICE_FILE "/etc/systemd/system/$SERVICE_FILE"
+        systemctl daemon-reload
+        systemctl restart crypto-stream
         print_success "Service updated and restarted"
     else
         print_success "Service file is up to date"
